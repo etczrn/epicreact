@@ -4,7 +4,7 @@
 import * as React from 'react'
 import {useLocalStorageState} from '../utils'
 
-function Board({onClick, squares}) {
+function Board({squares, onClick}) {
   function renderSquare(i) {
     return (
       <button className="square" onClick={() => onClick(i)}>
@@ -35,26 +35,27 @@ function Board({onClick, squares}) {
 }
 
 function Game() {
-  const [currentStep, setCurrentStep] = React.useState(0)
-  const [history, setHistory] = React.useState([Array(9).fill(null)])
+  const [history, setHistory] = useLocalStorageState('tic-tac-toe:history', [
+    Array(9).fill(null),
+  ])
+  const [currentStep, setCurrentStep] = useLocalStorageState(
+    'tic-tac-toe:step',
+    0,
+  )
 
   const currentSquares = history[currentStep]
 
-  const nextValue = calculateNextValue(currentSquares)
   const winner = calculateWinner(currentSquares)
+  const nextValue = calculateNextValue(currentSquares)
   const status = calculateStatus(winner, currentSquares, nextValue)
-
-  React.useEffect(() => {
-    window.localStorage.setItem('squares', JSON.stringify(currentSquares))
-  }, [currentSquares])
 
   function selectSquare(square) {
     if (winner || currentSquares[square]) return
 
     const newHistory = history.slice(0, currentStep + 1)
     const squaresCopy = [...currentSquares]
-    squaresCopy[square] = nextValue
 
+    squaresCopy[square] = nextValue
     setHistory([...newHistory, squaresCopy])
     setCurrentStep(newHistory.length)
   }
@@ -65,7 +66,7 @@ function Game() {
   }
 
   const moves = history.map((stepSquares, step) => {
-    const desc = step === 0 ? 'Go to game start' : `Go to move #${step}`
+    const desc = step ? `Go to move #${step}` : 'Go to game start'
     const isCurrentStep = step === currentStep
     return (
       <li key={step}>
