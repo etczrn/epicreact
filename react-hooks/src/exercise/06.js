@@ -10,43 +10,44 @@ import {
 } from '../pokemon'
 
 function PokemonInfo({pokemonName}) {
+  const [status, setStatus] = React.useState('idle')
   const [pokemon, setPokemon] = React.useState(null)
   const [error, setError] = React.useState(null)
 
   React.useEffect(() => {
     if (!pokemonName) return
 
-    setPokemon(null) // reset state to show loading state
-    setError(null) // reset error state
+    setStatus('pending')
 
     fetchPokemon(pokemonName).then(
-      pokemonData => setPokemon(pokemonData),
-      error => setError(error),
+      pokemonData => {
+        setPokemon(pokemonData)
+        setStatus('resolved')
+      },
+      error => {
+        setError(error)
+        setStatus('rejected')
+      },
     )
-    // * // option 1: using .catch
-    // * You'll handle an error in the fetchPokemon promise,
-    // * but you'll also handle an error in the setPokemon(pokemon) call as well.
-
-    // * option 2: using the second argument to .then
-    // * You will catch an error that happens in fetchPokemon only.
   }, [pokemonName])
 
-  if (error) {
+  // * Render different UI based on that status variable
+  if (status === 'idle') {
+    return 'Submit a pokemon'
+  } else if (status === 'pending') {
+    return <PokemonInfoFallback name={pokemonName} />
+  } else if (status === 'rejected') {
     return (
       <div role="alert">
         There was an error:{' '}
         <pre style={{whiteSpace: 'normal'}}>{error.message}</pre>
       </div>
     )
-  }
-
-  if (!pokemonName) {
-    return 'Submit a pokemon'
-  } else if (!pokemon) {
-    return <PokemonInfoFallback name={pokemonName} />
-  } else {
+  } else if (status === 'resolved') {
     return <PokemonDataView pokemon={pokemon} />
   }
+
+  throw new Error('This should be impossible')
 }
 
 function App() {
