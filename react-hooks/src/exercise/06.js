@@ -22,15 +22,6 @@ function ErrorFallback({error, resetErrorBoundary}) {
 
 function PokemonInfo({pokemonName}) {
   const [state, setState] = React.useState({
-    // * We go Pokémon for Pikachu and then Charizard,
-    // * we no longer get that idle state at all.
-    // * If we do get an errorState, then we can recover from that.
-    // * We don't see that Submit a Pokémon because that Pokémon name is being passed.
-    // * We're initializing this new Pokémon info component instance with a pending status,
-    // * rather than an idle status.
-    // * But the core problem still exists
-    // * where we're completely unmounting this Pokémon info component
-    // * and remounting it every single time we change the Pokémon name.
     status: pokemonName ? 'pending' : 'idle',
     pokemon: null,
     error: null,
@@ -82,7 +73,11 @@ function App() {
       <PokemonForm pokemonName={pokemonName} onSubmit={handleSubmit} />
       <hr />
       <div className="pokemon-info">
-        <ErrorBoundary FallbackComponent={ErrorFallback} onReset={handleReset}>
+        <ErrorBoundary
+          FallbackComponent={ErrorFallback}
+          onReset={handleReset}
+          // resetKeys={[pokemonName]}
+        >
           <PokemonInfo pokemonName={pokemonName} />
         </ErrorBoundary>
       </div>
