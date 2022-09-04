@@ -29,7 +29,7 @@ function pokemonInfoReducer(state, action) {
 }
 
 function useAsync(initialState) {
-  const [state, dispatch] = React.useReducer(pokemonInfoReducer, {
+  const [state, unsafeDispatch] = React.useReducer(pokemonInfoReducer, {
     status: 'idle',
     data: null,
     error: null,
@@ -37,6 +37,19 @@ function useAsync(initialState) {
   })
 
   const {data, error, status} = state
+
+  const mountedRef = React.useRef(false)
+
+  React.useEffect(() => {
+    mountedRef.current = true
+    return () => (mountedRef.current = false)
+  }, [])
+
+  const dispatch = React.useCallback((...args) => {
+    if (mountedRef.current) {
+      unsafeDispatch(...args)
+    }
+  }, [])
 
   const run = React.useCallback(promise => {
     dispatch({type: 'pending'})
@@ -65,9 +78,7 @@ function PokemonInfo({pokemonName}) {
     if (!pokemonName) {
       return
     }
-    // 💰 note the absence of `await` here. We're literally passing the promise
-    // to `run` so `useAsync` can attach it's own `.then` handler on it to keep
-    // track of the state of the promise.
+
     const pokemonPromise = fetchPokemon(pokemonName)
     run(pokemonPromise)
   }, [pokemonName, run])
