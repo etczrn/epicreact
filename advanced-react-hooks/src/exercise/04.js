@@ -4,11 +4,19 @@
 import * as React from 'react'
 
 function MessagesDisplay({messages}) {
+  console.log('%c render starts', 'color: red')
   const containerRef = React.useRef()
   // 🐨 replace useEffect with useLayoutEffect
   React.useEffect(() => {
+    console.log('%c useEffect runs', 'color: orange')
+  })
+
+  React.useLayoutEffect(() => {
+    console.log('%c useLayoutEffect runs', 'color: yellow')
     containerRef.current.scrollTop = containerRef.current.scrollHeight
   })
+
+  console.log('%c render ends', 'color: red')
 
   return (
     <div ref={containerRef} role="log">
