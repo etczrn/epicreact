@@ -7,6 +7,12 @@ function useMedia(query, initialState = false) {
   const [state, setState] = React.useState(initialState)
   // 🐨 call React.useDebugValue here.
   // 💰 here's the formatted label I use: `\`${query}\` => ${state}`
+  React.useDebugValue(`\`${query}\` => ${state}`)
+  /*
+  Media: "`(min-width: 1000px)` => false"
+  Media: "`(max-width: 999px) and (min-width: 700px)` => true"
+  Media: "`(max-width: 699px)` => false"
+   */
 
   React.useEffect(() => {
     let mounted = true
