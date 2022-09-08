@@ -1,4 +1,4 @@
-import styled from '@emotion/styled'
+import styled from '@emotion/styled/macro'
 import {Dialog as ReachDialog} from '@reach/dialog'
 
 // 🐨 create a button styled component here called "Button"
@@ -54,14 +54,18 @@ const Button = styled.button(
 )
 
 // Input
-//   borderRadius: '3px',
-//   border: '1px solid #f1f1f4',
-//   background: '#f1f2f7',
-//   padding: '8px 12px',
+const Input = styled.input({
+  borderRadius: '3px',
+  border: '1px solid #f1f1f4',
+  background: '#f1f2f7',
+  padding: '8px 12px',
+})
 
 // FormGroup
-//   display: 'flex',
-//   flexDirection: 'column',
+const FormGroup = styled.div({
+  display: 'flex',
+  flexDirection: 'column',
+})
 
 // 💰 I'm giving a few of these to you:
 const CircleButton = styled.button({
@@ -91,4 +95,4 @@ const Dialog = styled(ReachDialog)({
   },
 })
 
-export {Button, CircleButton, Dialog}
+export {Button, Input, FormGroup, CircleButton, Dialog}
