@@ -30,6 +30,29 @@ import {Dialog as ReachDialog} from '@reach/dialog'
 //   background: '#f1f2f7',
 //   color: '#434449',
 
+const buttonVariants = {
+  primary: {
+    background: '#3f51b5',
+    color: 'white',
+  },
+  secondary: {
+    background: '#f1f2f7',
+    color: '#434449',
+  },
+}
+
+const Button = styled.button(
+  {
+    // default style
+    padding: '10px 15px',
+    border: '0',
+    lineHeight: '1',
+    borderRadius: '3px',
+  },
+  // dynamic style
+  ({variant = 'primary'}) => buttonVariants[variant],
+)
+
 // Input
 //   borderRadius: '3px',
 //   border: '1px solid #f1f1f4',
@@ -68,4 +91,4 @@ const Dialog = styled(ReachDialog)({
   },
 })
 
-export {CircleButton, Dialog}
+export {Button, CircleButton, Dialog}
