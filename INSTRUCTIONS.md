@@ -2,7 +2,200 @@
 
 ## 📝 Your Notes
 
-Elaborate on your learnings here in `INSTRUCTIONS.md`
+### Exercise
+
+```js
+/** @jsx jsx */
+import {jsx} from '@emotion/core'
+
+import './bootstrap'
+import Tooltip from '@reach/tooltip'
+import {FaSearch} from 'react-icons/fa'
+import {Input, BookListUL, Spinner} from './components/lib'
+import {BookRow} from './components/book-row'
+import {useState, useEffect} from 'react'
+import {client} from 'utils/api-client.exercise'
+
+function DiscoverBooksScreen() {
+  const [status, setStatus] = useState('idle')
+  const [query, setQuery] = useState('')
+  const [queried, setQueried] = useState(false)
+  const [data, setData] = useState(null)
+
+  const isLoading = status === 'loading'
+  const isSuccess = status === 'success'
+
+  useEffect(() => {
+    if (!queried) {
+      return
+    }
+
+    setStatus('loading')
+    client(`books?query=${encodeURIComponent(query)}`).then(responseData => {
+      setData(responseData)
+      setStatus('success')
+    })
+  }, [queried, query])
+
+  function handleSearchSubmit(event) {
+    event.preventDefault()
+    setQuery(event.target.elements.search.value)
+    setQueried(true)
+  }
+
+  return (
+    <div
+      css={{maxWidth: 800, margin: 'auto', width: '90vw', padding: '40px 0'}}
+    >
+      <form onSubmit={handleSearchSubmit}>
+        <Input
+          placeholder="Search books..."
+          id="search"
+          css={{width: '100%'}}
+        />
+        <Tooltip label="Search Books">
+          <label htmlFor="search">
+            <button
+              type="submit"
+              css={{
+                border: '0',
+                position: 'relative',
+                marginLeft: '-35px',
+                background: 'transparent',
+              }}
+            >
+              {isLoading ? <Spinner /> : <FaSearch aria-label="search" />}
+            </button>
+          </label>
+        </Tooltip>
+      </form>
+
+      {isSuccess ? (
+        data?.books?.length ? (
+          <BookListUL css={{marginTop: 20}}>
+            {data.books.map(book => (
+              <li key={book.id} aria-label={book.title}>
+                <BookRow key={book.id} book={book} />
+              </li>
+            ))}
+          </BookListUL>
+        ) : (
+          <p>No books found. Try another search.</p>
+        )
+      ) : null}
+    </div>
+  )
+}
+
+export {DiscoverBooksScreen}
+
+function client(endpoint, customConfig = {}) {
+  // 🐨 create the config you'll pass to window.fetch
+  //    make the method default to "GET"
+  // 💰 if you're confused by this, that's fine. Scroll down to the bottom
+  // and I've got some code there you can copy/paste.
+  // 🐨 call window.fetch(fullURL, config) then handle the json response
+  // 📜 https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+  // 💰 here's how to get the full URL: `${process.env.REACT_APP_API_URL}/${endpoint}`
+  const config = {method: 'GET', ...customConfig}
+
+  return window
+    .fetch(`${process.env.REACT_APP_API_URL}/${endpoint}`, config)
+    .then(response => response.json())
+}
+
+export {client}
+```
+
+### 1. 💯 handle failed requests
+
+```js
+function client(endpoint, customConfig = {}) {
+  const config = {method: 'GET', ...customConfig}
+
+  return window
+    .fetch(`${process.env.REACT_APP_API_URL}/${endpoint}`, config)
+    .then(async response => {
+      const data = await response.json()
+      if (response.ok) {
+        return data
+      } else {
+        return Promise.reject(data)
+      }
+    })
+}
+
+export {client}
+
+// updated useEffect
+useEffect(() => {
+  if (!queried) {
+    return
+  }
+
+  setStatus('loading')
+  client(`books?query=${encodeURIComponent(query)}`).then(
+    responseData => {
+      setData(responseData)
+      setStatus('success')
+    },
+    errorData => {
+      setError(errorData)
+      setStatus('error')
+    },
+  )
+}, [queried, query])
+```
+
+- The interesting thing about window.fetch is that it won't reject your promise
+  unless the network request itself failed. If talking to the server at all
+  failed, then you'll get a rejection, but if that talking to the server was
+  successful, then you don't get a rejection even if the request itself was a
+  non-200 status code.
+
+- We want our client to reject the promise if the response is not OK, and that's
+  what we're going to handle in our API client. Now, remember, that
+  response.json is an async call, so I'm going to turn this successHandler
+  function into an async function. That way, I can await this response.json, and
+  that will give me my data.
+
+- Now, I'm going to get data, whether the request was successful or not, and I'm
+  going to use that data for the Success response or for the rejected promise.
+
+I'm going to determine whether it should resolve or reject based on response.OK.
+If the response is OK, then we can simply return the data, and that leaves our
+promise in a resolve state, but if the response was not OK, then we're going to
+return a Promise.rejects version of the data. That means that our promise will
+reject.
+
+### 2. 💯 use the useAsync hook
+
+```js
+const {data, error, run, isLoading, isSuccess, isError} = useAsync()
+const [query, setQuery] = useState('')
+const [queried, setQueried] = useState(false)
+
+useEffect(() => {
+  if (!queried) return
+
+  run(client(`books?query=${encodeURIComponent(query)}`))
+}, [queried, query, run])
+```
+
+- This run() function is what we call anytime we want to trigger a run of
+  something asynchronous that will update our data and our error and our status
+  values.
+
+- Well, `client(`books?query=${encodeURIComponent(query)}`)` is this promise
+  that we get back from clients, so we'll call run with that client promise.
+  Then, we'll add a run to our dependencies here. We don't need to worry about
+  it though, because run is memoized using useCallback, so that's never going to
+  change on us.
+
+- Anywhere in our application that needs some asynchronous handling can use this
+  useAsync hook and not have to manage all of the status of that promise or the
+  data, or error state that results from that promise, which really cleaned up
+  our code right here.
 
 ## Background
 
