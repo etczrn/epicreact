@@ -2,7 +2,285 @@
 
 ## 📝 Your Notes
 
-Elaborate on your learnings here in `INSTRUCTIONS.md`
+### Exercise
+
+```js
+/** @jsx jsx */
+import {jsx} from '@emotion/core'
+
+import {useState} from 'react'
+// 🐨 you're going to need this:
+import * as auth from 'auth-provider'
+import {AuthenticatedApp} from './authenticated-app'
+import {UnauthenticatedApp} from './unauthenticated-app'
+
+function App() {
+  // 🐨 useState for the user
+  const [user, setUser] = useState(null)
+
+  // 🐨 create a login function that calls auth.login then sets the user
+  // 💰 const login = form => auth.login(form).then(u => setUser(u))
+  const login = form => auth.login(form).then(user => setUser(user))
+
+  // 🐨 create a registration function that does the same as login except for register
+  const register = form => auth.register(form).then(user => setUser(user))
+
+  // 🐨 create a logout function that calls auth.logout() and sets the user to null
+  const logout = () => {
+    auth.logout()
+    setUser(null)
+  }
+
+  // 🐨 if there's a user, then render the AuthenticatedApp with the user and logout
+  // 🐨 if there's not a user, then render the UnauthenticatedApp with login and register
+  return user ? (
+    <AuthenticatedApp user={user} logout={logout} />
+  ) : (
+    <UnauthenticatedApp login={login} register={register} />
+  )
+}
+
+export {App}
+
+/*
+eslint
+  no-unused-vars: "off",
+*/
+```
+
+- All that we did here in our app was we brought in both the authenticated side
+  and the unauthenticated side of our application, and we determined which one
+  of those to render based on whether we had a user in our React state.
+
+- Then, we brought in our authProvider here to handle the login and registration
+  and logout functionalities of our application that we had already built. When
+  we log in, we call auth.login. When that promise resolves, then we send the
+  user state to whatever we get back from that auth.login promise. Similar for
+  register, and then our logout just calls auth.logout and sets our user to null
+  so that we will render the unauthenticated portion of our app.
+
+### 1. 💯 Load the user's data on page load
+
+```js
+// * app.js
+import {client} from 'utils/api-client.exercise'
+
+async function getUser() {
+  let user = null
+  const token = await auth.getToken()
+
+  if (token) {
+    const data = await client('me', {token})
+    user = data.user
+  }
+
+  return user
+}
+
+function App() {
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    getUser().then(user => setUser(user))
+  }, [])
+
+
+// * api-client.js
+const apiURL = process.env.REACT_APP_API_URL
+
+function client(
+  endpoint,
+  {token, headers: customHeaders, ...customConfig} = {},
+) {
+  const config = {
+    method: 'GET',
+    headers: {
+      Authorization: token ? `Bearer ${token}` : undefined,
+      ...customHeaders,
+    },
+    ...customConfig,
+  }
+
+  return window.fetch(`${apiURL}/${endpoint}`, config).then(async response => {
+    const data = await response.json()
+    if (response.ok) {
+      return data
+    } else {
+      return Promise.reject(data)
+    }
+  })
+}
+
+export {client}
+
+```
+
+- In review, what we've done here is we created a function called `getUser` that
+  will try to get the user's token. If they're currently logged in, then we'll
+  get a token back.
+
+- We can make a request to our backend to get the user's information like their
+  username. Then, we assign that user property from the data we get back to the
+  user and return that. Then as soon as our app is mounted, we make that
+  request.
+
+- When that resolves, then we'll assign our user state to the user that we get
+  from that `getUser` function. That way, the user doesn't have to log in every
+  time they reach our app. To make this `getUser` function work, we had to add
+  the functionality for client requests to be authenticated, so we had to pass
+  this token.
+
+- To do that, we accepted that token destructured off of the custom config that
+  they're providing. We attached an authorization header to our configuration.
+  If the token exists, then we'll set it to bearer token.
+
+- Otherwise, it's undefined. We also restructured the headers so that the
+  developer can provide custom headers. We can merge all that together quite
+  nicely before we pass it on to window.fetch.
+
+### 2. 💯 Use useAsync
+
+```js
+/** @jsx jsx */
+import {jsx} from '@emotion/core'
+
+import {useEffect} from 'react'
+import * as auth from 'auth-provider'
+import {FullPageSpinner} from 'components/lib'
+import * as colors from 'styles/colors'
+import {client} from 'utils/api-client.exercise'
+import {useAsync} from 'utils/hooks'
+import {AuthenticatedApp} from './authenticated-app'
+import {UnauthenticatedApp} from './unauthenticated-app'
+
+async function getUser() {
+  let user = null
+  const token = await auth.getToken()
+
+  if (token) {
+    const data = await client('me', {token})
+    user = data.user
+  }
+
+  return user
+}
+
+function App() {
+  const {
+    data: user,
+    error,
+    isIdle,
+    isLoading,
+    isError,
+    isSuccess,
+    run,
+    setData,
+  } = useAsync()
+
+  useEffect(() => {
+    run(getUser())
+  }, [run])
+
+  const login = form => auth.login(form).then(user => setData(user))
+
+  const register = form => auth.register(form).then(user => setData(user))
+
+  const logout = () => {
+    auth.logout()
+    setData(null)
+  }
+
+  if (isIdle || isLoading) {
+    return <FullPageSpinner />
+  }
+
+  if (isError) {
+    return (
+      <div
+        css={{
+          color: colors.danger,
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <p>Uh oh... There's a problem. Try refreshing the app.</p>
+        <pre>{error.message}</pre>
+      </div>
+    )
+  }
+
+  if (isSuccess) {
+    return user ? (
+      <AuthenticatedApp user={user} logout={logout} />
+    ) : (
+      <UnauthenticatedApp login={login} register={register} />
+    )
+  }
+}
+
+export {App}
+
+/*
+eslint
+  no-unused-vars: "off",
+*/
+```
+
+### 3. 💯 automatically logout on 401
+
+```js
+import * as auth from 'auth-provider'
+const apiURL = process.env.REACT_APP_API_URL
+
+function client(
+  endpoint,
+  {token, headers: customHeaders, ...customConfig} = {},
+) {
+  const config = {
+    method: 'GET',
+    headers: {
+      Authorization: token ? `Bearer ${token}` : undefined,
+      ...customHeaders,
+    },
+    ...customConfig,
+  }
+
+  return window.fetch(`${apiURL}/${endpoint}`, config).then(async response => {
+    const data = await response.json()
+
+    // 401 Unauthorized
+    if (response.status === 401) {
+      await auth.logout()
+      window.location.assign(window.location)
+
+      return Promise.reject({message: 'Please re-authenticate'})
+    }
+
+    if (response.ok) {
+      return data
+    } else {
+      return Promise.reject(data)
+    }
+  })
+}
+
+export {client}
+```
+
+- In our response here, we can determine that status code with response.status.
+  If that's 401, then we want to log them out. Once they're logged out, we also
+  want to just clear the state of the application. We want to get the user out
+  of here, and the easiest way for us to do that is to say
+  window.location.assign('window.location'). That will trigger a full-page
+  refresh. Any data that's in memory will just get wiped totally clean.
+
+- Let's also reject this promise just for completeness, even though this is
+  going to trigger a refresh anyway. We'll say promise.reject. We'll just give
+  it a message of "Please reauthenticate." If we save that, then we are good to
+  go.
 
 ## Background
 
@@ -176,16 +454,8 @@ solve this loading state issue.
 She mentions you'll need to know that you can set the data directly:
 
 ```javascript
-const {
-  data,
-  error,
-  isIdle,
-  isLoading,
-  isSuccess,
-  isError,
-  run,
-  setData,
-} = useAsync()
+const {data, error, isIdle, isLoading, isSuccess, isError, run, setData} =
+  useAsync()
 
 const doSomething = () => somethingAsync().then(data => setData(data))
 ```
